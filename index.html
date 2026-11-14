@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="撮影ガイド">
 <title>撮影ガイド</title>
 <style>
 :root{--bg:#101114;--panel:#1a1c21;--line:#30343c;--ink:#ece8df;--mute:#9aa1ad;--acc:#d4ae55}
@@ -29,7 +33,12 @@ h1{font-size:17px;margin:4px 0 10px}
 @media (orientation:landscape) and (max-height:560px){
   .wrap{padding:6px max(8px,env(safe-area-inset-left)) 6px}
   .layout{height:calc(100dvh - 12px);gap:8px}
-  h1,.tips,.note{display:none}
+  h1,.note{display:none}
+  .layout{position:relative}
+  .tips{display:none;position:absolute;left:8px;top:8px;bottom:8px;right:calc(clamp(170px,30vw,310px) + 16px);overflow:auto;z-index:5;background:rgba(16,17,20,.97);margin:0}
+  .layout.showTips .tips{display:block}
+  .bar #tipBtn{display:block}
+  html,body{overflow:hidden}
   .seg{gap:4px;margin-bottom:8px}
   .seg span{padding:6px 8px;font-size:12px}
   button,.btn{padding:9px 8px;font-size:13px}
@@ -46,6 +55,7 @@ button.shot{flex:1;min-width:160px}
 .tips h2{font-size:13px;margin:0 0 6px;color:var(--acc);letter-spacing:.05em}
 .tips ul{margin:0;padding-left:20px}
 .hide{display:none!important}
+#tipBtn{display:none}
 .note{color:var(--mute);font-size:12px;margin-top:8px}
 </style>
 </head>
@@ -75,6 +85,7 @@ button.shot{flex:1;min-width:160px}
   <button id="rot" class="sub hide">画面を回転</button>
   <button id="flip" class="sub hide">前面/背面</button>
   <button id="shot" class="shot hide">撮影</button>
+  <button id="tipBtn" class="sub" type="button">撮り方のポイント</button>
   <button id="again" class="sub hide">撮り直す</button>
   <button id="share" class="hide">保存・共有</button>
   <a id="dl" class="btn hide" download="photo.jpg">ダウンロード</a>
@@ -174,6 +185,7 @@ $('share').onclick=async()=>{
     else alert('写真を長押しして「写真に保存」してください。');
   }catch(e){}
 };
+$('tipBtn').onclick=()=>document.querySelector('.layout').classList.toggle('showTips');
 renderTips();fit();
 </script>
 </body>
