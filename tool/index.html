@@ -71,6 +71,8 @@ canvas{width:100%;max-width:640px;height:auto;border-radius:6px;background:#000;
     <input type="range" id="tint" min="0" max="0.6" step="0.02" value="0" style="width:100%">
     <label>切り抜き済みPNG(任意・透過。入れると自動切り抜きは使わない)</label>
     <input type="file" id="fCut" accept="image/png">
+    <label>人物の濃さ補正(黒い服が透けるときは右へ)</label>
+    <input type="range" id="alphaBoost" min="0" max="1" step="0.05" value="0.5" style="width:100%">
     <label><input type="checkbox" id="keepTable"> テーブルを写真から残す(チップ・トロフィー用。写真と切り抜きPNGの両方を入れる)</label>
     <label>テーブルの境界(写真の上から何%。人物の手前に来る位置)</label>
     <input type="range" id="tableY" min="30" max="95" step="1" value="62" style="width:100%">
@@ -177,6 +179,15 @@ function trimAlpha(im){
   const d=x.getImageData(0,0,c.width,c.height).data;let x0=c.width,y0=c.height,x1=-1,y1=-1;
   for(let y=0;y<c.height;y++)for(let xx=0;xx<c.width;xx++){if(d[(y*c.width+xx)*4+3]>24){if(xx<x0)x0=xx;if(xx>x1)x1=xx;if(y<y0)y0=y;if(y>y1)y1=y}}
   if(x1<0)return im;const o=document.createElement('canvas');o.width=x1-x0+1;o.height=y1-y0+1;o.getContext('2d').drawImage(c,x0,y0,o.width,o.height,0,0,o.width,o.height);o.off={x0,y0,ow:im.width,oh:im.height};return o}
+function applyBoost(){
+  const raw=st.cutRaw;if(!raw)return;
+  const b=+$('alphaBoost').value,lo=0.08,hi=Math.max(0.3,1-0.7*b);
+  const c=document.createElement('canvas');c.width=raw.width;c.height=raw.height;const x=c.getContext('2d');x.drawImage(raw,0,0);
+  if(b>0){const id=x.getImageData(0,0,c.width,c.height),d=id.data;
+    for(let i=3;i<d.length;i+=4){const a=d[i]/255;d[i]=a<=lo?0:a>=hi?255:Math.round((a-lo)/(hi-lo)*255)}
+    x.putImageData(id,0,0)}
+  c.off=raw.off;st.cut=c;
+}
 function drawStage(anchor){
   if(st.bg){const im=st.bg,s=Math.max(W/im.width,H/im.height);ctx.drawImage(im,(W-im.width*s)/2,(H-im.height*s)/2,im.width*s,im.height*s)}
   else{const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#0b0a08');g.addColorStop(1,'#2a2112');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);ctx.fillStyle='#8a7a55';ctx.font='28px sans-serif';ctx.textAlign='center';ctx.fillText('背景画像を選んでください',W/2,H/2)}
@@ -205,7 +216,7 @@ async function makeCut(){
     let src=st.photoFile;
     if(Math.max(st.photo.width,st.photo.height)>1600){const k=1600/Math.max(st.photo.width,st.photo.height),c=document.createElement('canvas');c.width=Math.round(st.photo.width*k);c.height=Math.round(st.photo.height*k);c.getContext('2d').drawImage(st.photo,0,0,c.width,c.height);src=await new Promise(r=>c.toBlob(r,'image/png'))}
     const blob=await rb(src,{output:{format:'image/png'},progress:(k,c,t)=>status('読込・処理中… '+(t?Math.round(c/t*100)+'%':''))});
-    await new Promise(res=>loadImg(blob,im=>{st.cut=trimAlpha(im);st.cutFor=st.photoFile;res()}));
+    await new Promise(res=>loadImg(blob,im=>{st.cutRaw=trimAlpha(im);applyBoost();st.cutFor=st.photoFile;res()}));
     status('切り抜き完了。ドラッグで位置、バーで大きさを調整できます。');
   }catch(e){st.failed=true;status('切り抜きに失敗しました(ネット接続を確認してください): '+(e&&e.message||e))}
   st.busy=false;draw();
@@ -321,8 +332,8 @@ document.querySelectorAll('input[type=radio]').forEach(e=>e.addEventListener('ch
 document.querySelectorAll('input[type=text],input[type=color]').forEach(e=>e.addEventListener('input',draw));
 $('fAnn').onchange=e=>e.target.files[0]&&loadImg(e.target.files[0],im=>{extract(im);draw()});
 $('fBg').onchange=e=>e.target.files[0]&&loadImg(e.target.files[0],im=>{st.bg=im;draw()});
-$('fCut').onchange=e=>e.target.files[0]&&loadImg(e.target.files[0],im=>{st.cut=trimAlpha(im);st.cutFor=st.photoFile||'manual';st.manual=true;st.failed=false;status('切り抜き済み画像を使っています。');draw()});
-$('keepTable').onchange=draw;$('tableY').oninput=draw;
+$('fCut').onchange=e=>e.target.files[0]&&loadImg(e.target.files[0],im=>{st.cutRaw=trimAlpha(im);applyBoost();st.cutFor=st.photoFile||'manual';st.manual=true;st.failed=false;status('切り抜き済み画像を使っています。');draw()});
+$('keepTable').onchange=draw;$('alphaBoost').oninput=()=>{applyBoost();draw()};$('tableY').oninput=draw;
 $('tint').oninput=draw;$('ring').onchange=draw;$('ringY').oninput=draw;
 $('fPhoto').onchange=e=>e.target.files[0]&&loadImg(e.target.files[0],im=>{st.photo=im;st.photoFile=e.target.files[0];st.cut=null;st.cutFor=null;st.manual=false;st.failed=false;if(val('layout')==='S')makeCut();st.dx=st.dy=0;st.zoom=1;$('zoom').value=1;draw()});
 $('fLogo').onchange=e=>e.target.files[0]&&loadImg(e.target.files[0],im=>{st.logo=im;draw()});
