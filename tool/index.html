@@ -168,8 +168,8 @@ function drawRing(){
   let s=maxH;o.font=font(s);while(o.measureText(t).width*CX>maxW&&s>16){s-=2;o.font=font(s)}
   const w=Math.ceil(o.measureText(t).width*CX)+8,h=Math.ceil(s*1.2);off.width=w;off.height=h;
   o.scale(CX,1);o.font=font(s);o.textBaseline='middle';o.textAlign='center';o.fillStyle='#fff';o.fillText(t,w/CX/2,h/2+s*.04);
-  const d=o.getImageData(0,0,w,h).data,cx=541,y0=311+(+$('ringY').value),k=0.00038;
-  const pos=(gx,gy)=>{const dx=gx+p/2-w/2,th=Math.atan(2*k*dx),vy=gy+p/2-h/2;return[cx+dx-vy*Math.sin(th),y0+k*dx*dx+vy*Math.cos(th)]};
+  const d=o.getImageData(0,0,w,h).data,cx=540,y0=308+(+$('ringY').value),k2=0.000424,k4=7.7e-10;
+  const pos=(gx,gy)=>{const dx=gx+p/2-w/2,th=Math.atan(2*k2*dx+4*k4*dx*dx*dx),vy=gy+p/2-h/2;return[cx+dx-vy*Math.sin(th),y0+k2*dx*dx+k4*dx*dx*dx*dx+vy*Math.cos(th)]};
   const lit=(gx,gy)=>d[(Math.min(h-1,gy+(p>>1))*w+Math.min(w-1,gx+(p>>1)))*4+3]>110;
   ctx.save();ctx.textAlign='left';
   ctx.fillStyle='rgba(255,230,170,.07)';
