@@ -72,11 +72,9 @@ button.mini{width:auto;margin:0;padding:7px 10px;font-size:12px;background:var(-
     <input type="file" id="fBg" accept="image/*">
     <label>背景の色味を告知の色に寄せる(0=そのまま)</label>
     <input type="range" id="tint" min="0" max="0.6" step="0.02" value="0" style="width:100%">
-    <label>切り抜き済みPNG(任意・透過。入れると自動切り抜きは使わない)</label>
-    <input type="file" id="fCut" accept="image/png">
     <label>人物の濃さ補正(黒い服が透けるときは右へ。中央=標準)</label>
     <input type="range" id="alphaBoost" min="0" max="4" step="0.05" value="2" style="width:100%">
-    <label><input type="checkbox" id="keepTable"> テーブルを写真から残す(チップ・トロフィー用。写真と切り抜きPNGの両方を入れる)</label>
+    <label><input type="checkbox" id="keepTable"> テーブルを写真から残す(チップ・トロフィー用)</label>
     <label>テーブルの境界(写真の上から何%。人物の手前に来る位置)</label>
     <input type="range" id="tableY" min="30" max="95" step="1" value="62" style="width:100%">
     <label><input type="checkbox" id="ring" checked> イベント名を上のLEDリングに湾曲表示(内蔵背景用)</label>
@@ -213,7 +211,7 @@ function drawStage(anchor){
     const fade=keep?0.001:Math.min(130,tc.height*.3),g=t.createLinearGradient(0,tc.height-fade,0,tc.height);g.addColorStop(0,'rgba(0,0,0,1)');g.addColorStop(1,'rgba(0,0,0,0)');
     t.fillStyle=g;t.fillRect(0,0,tc.width,tc.height);
     ctx.drawImage(tc,(W-w)/2+st.dx,anchor-h+st.dy)}
-  else if(st.photo){ctx.fillStyle='rgba(255,255,255,.8)';ctx.font='34px sans-serif';ctx.textAlign='center';const m=st.busy?['切り抜き中…']:st.failed?['自動切り抜きできません','「切り抜き済みPNG」を入れてください']:['切り抜き待ち'];m.forEach((t,i)=>ctx.fillText(t,W/2,H/2+i*48))}
+  else if(st.photo){ctx.fillStyle='rgba(255,255,255,.8)';ctx.font='34px sans-serif';ctx.textAlign='center';const m=st.busy?['切り抜き中…']:st.failed?['自動切り抜きできません','ネット接続を確認して、写真を入れ直してください']:['切り抜き待ち'];m.forEach((t,i)=>ctx.fillText(t,W/2,H/2+i*48))}
 }
 async function makeCut(){
   if(st.manual||!st.photoFile||st.cutFor===st.photoFile||st.busy)return;
@@ -372,7 +370,6 @@ document.querySelectorAll('input[type=radio]').forEach(e=>e.addEventListener('ch
 document.querySelectorAll('input[type=text],input[type=color]').forEach(e=>e.addEventListener('input',draw));
 $('fAnn').onchange=e=>e.target.files[0]&&loadImg(e.target.files[0],im=>{extract(im);draw()});
 $('fBg').onchange=e=>e.target.files[0]&&loadImg(e.target.files[0],im=>{st.bg=im;draw()});
-$('fCut').onchange=e=>e.target.files[0]&&loadImg(e.target.files[0],im=>{st.cutRaw=trimAlpha(im);applyBoost();st.cutFor=st.photoFile||'manual';st.manual=true;st.failed=false;status('切り抜き済み画像を使っています。');draw()});
 $('keepTable').onchange=draw;$('alphaBoost').oninput=()=>{applyBoost();draw()};$('tableY').oninput=draw;
 $('tint').oninput=draw;$('ring').onchange=draw;$('ringY').oninput=draw;
 $('fPhoto').onchange=e=>e.target.files[0]&&loadImg(e.target.files[0],im=>{st.photo=im;st.photoFile=e.target.files[0];st.cut=null;st.cutFor=null;st.manual=false;st.failed=false;if(val('layout')==='S')makeCut();st.dx=st.dy=0;st.zoom=1;$('zoom').value=1;draw()});
