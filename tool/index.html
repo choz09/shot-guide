@@ -359,7 +359,9 @@ function draw(){
 async function fonts(){try{await Promise.all([`700 40px Cinzel`,`800 italic 40px "Playfair Display"`,`700 italic 40px "Playfair Display"`,`900 40px "Zen Old Mincho"`,`700 40px "Zen Old Mincho"`].map(f=>document.fonts.load(f,'Aa日本語')))}catch(e){}draw()}
 
 /* ---- UI ---- */
+let lastKind=null;
 function sync(){
+  {const k=val('kind');if(k!==lastKind){$('keepTable').checked=(k==='win');lastKind=k}}
   $('sBox').classList.toggle('hide',val('layout')!=='S');if(val('layout')==='S')makeCut();
   $('segN').classList.toggle('hide',val('kind')!=='win');
   $('names').classList.toggle('hide',val('kind')!=='win');
