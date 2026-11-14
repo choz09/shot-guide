@@ -247,7 +247,7 @@ function drawPlate(acc,kind){
       ctx.font=`900 ${ns}px ${MINCHO}`;ctx.fillStyle='#fff';ctx.fillText(p[1]||'NAME',x0+lw+30,y);ctx.textAlign='center'});
   }
   // ロゴ行: Nine(筆記体) | AMUSEMENT POKER ROOM
-  const ly=1304,lh2=50,lw2=NINEIMG.complete&&NINEIMG.naturalWidth?lh2*NINEIMG.naturalWidth/NINEIMG.naturalHeight:0;
+  const ly=Math.min(1304,pb+74),lh2=50,lw2=NINEIMG.complete&&NINEIMG.naturalWidth?lh2*NINEIMG.naturalWidth/NINEIMG.naturalHeight:0;
   ctx.font=`700 24px ${CINZEL}`;const tw=(()=>{let w=0;for(const ch of 'AMUSEMENT POKER ROOM')w+=ctx.measureText(ch).width+4;return w-4})();
   const total=lw2+(lw2?34:0)+tw,x0=W/2-total/2;
   if(lw2){ctx.drawImage(NINEIMG,x0,ly-lh2/2-4,lw2,lh2);ctx.fillStyle=acc;ctx.fillRect(x0+lw2+16,ly-18,2,36)}
