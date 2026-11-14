@@ -18,13 +18,22 @@ h1{font-size:17px;margin:4px 0 10px}
 .stageBox{display:flex;align-items:center;justify-content:center;width:100%;min-width:0}
 .stage{position:relative;width:100%;height:auto;aspect-ratio:4/3;background:#000;border-radius:8px;overflow:hidden;flex:none}
 .side{min-width:0}
-@media (orientation:landscape) and (min-width:760px){
+@media (orientation:landscape){
   .wrap{max-width:none;padding:10px max(12px,env(safe-area-inset-left)) 10px}
   .layout{flex-direction:row;height:calc(100dvh - 20px);align-items:stretch}
   .stageBox{flex:1;height:100%;overflow:hidden}
-  .side{width:310px;flex:none;overflow-y:auto}
+  .side{width:clamp(170px,30vw,310px);flex:none;overflow-y:auto}
   .bar button,.bar .btn{flex:1 1 45%}
   button.shot{flex:1 1 100%}
+}
+@media (orientation:landscape) and (max-height:560px){
+  .wrap{padding:6px max(8px,env(safe-area-inset-left)) 6px}
+  .layout{height:calc(100dvh - 12px);gap:8px}
+  h1,.tips,.note{display:none}
+  .seg{gap:4px;margin-bottom:8px}
+  .seg span{padding:6px 8px;font-size:12px}
+  button,.btn{padding:9px 8px;font-size:13px}
+  .bar{gap:6px;margin:0}
 }
 .stage canvas,.stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
 .stage video{position:absolute;left:50%;top:50%;max-width:none;object-fit:contain;transform:translate(-50%,-50%) rotate(var(--rot,0deg))}
@@ -123,7 +132,7 @@ function drawGuide(){
 }
 function fit(){
   const vw=v.videoWidth||4,vh=v.videoHeight||3,sw=rot%180===0?vw:vh,sh=rot%180===0?vh:vw,a=sw/sh;
-  const box=$('stageBox'),land=matchMedia('(orientation:landscape) and (min-width:760px)').matches;
+  const box=$('stageBox'),land=matchMedia('(orientation:landscape)').matches;
   const aw=box.clientWidth,ah=land?box.clientHeight:Math.max(240,innerHeight-300);
   const w=Math.max(100,Math.min(aw,ah*a)),hh=w/a,st=$('stage');
   st.style.aspectRatio='auto';st.style.width=w+'px';st.style.height=hh+'px';
