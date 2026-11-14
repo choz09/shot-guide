@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>撮影ガイド</title>
+<style>
+:root{--bg:#101114;--panel:#1a1c21;--line:#30343c;--ink:#ece8df;--mute:#9aa1ad;--acc:#d4ae55}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,"Hiragino Sans","Yu Gothic UI",sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:12px max(12px,env(safe-area-inset-left)) 40px}
+h1{font-size:17px;margin:4px 0 10px}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+.seg label{cursor:pointer}.seg input{display:none}
+.seg span{display:inline-block;padding:9px 14px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.seg input:checked+span{border-color:var(--acc);color:var(--acc);background:#241f10}
+.stage{position:relative;width:100%;background:#000;border-radius:8px;overflow:hidden;aspect-ratio:4/3}
+.stage video,.stage canvas,.stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.stage .msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:var(--mute)}
+.bar{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}
+button,.btn{padding:13px 18px;border-radius:10px;border:0;background:var(--acc);color:#1a1405;font-weight:700;font-size:16px;cursor:pointer;text-decoration:none;display:inline-block}
+button.sub{background:var(--panel);color:var(--ink);border:1px solid var(--line)}
+button.shot{flex:1;min-width:160px}
+.tips{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin-top:10px;color:var(--ink)}
+.tips h2{font-size:13px;margin:0 0 6px;color:var(--acc);letter-spacing:.05em}
+.tips ul{margin:0;padding-left:20px}
+.hide{display:none!important}
+.note{color:var(--mute);font-size:12px;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>優勝・FT写真の撮影ガイド</h1>
+
+<div class="seg" id="mode">
+  <label><input type="radio" name="m" value="win1" checked><span>優勝 1名</span></label>
+  <label><input type="radio" name="m" value="win2"><span>優勝+準優勝</span></label>
+  <label><input type="radio" name="m" value="win3"><span>3位まで</span></label>
+  <label><input type="radio" name="m" value="ft"><span>FT集合(全員)</span></label>
+</div>
+
+<div class="stage" id="stage">
+  <video id="v" playsinline muted autoplay></video>
+  <canvas id="g"></canvas>
+  <img id="shotImg" class="hide" alt="撮影した写真">
+  <div class="msg" id="msg">「カメラを開始」を押すと、ガイド枠つきで撮影できます。<br>スマホ・iPadは横向きにしてください。</div>
+</div>
+
+<div class="bar">
+  <button id="start">カメラを開始</button>
+  <button id="flip" class="sub hide">前面/背面</button>
+  <button id="shot" class="shot hide">撮影</button>
+  <button id="again" class="sub hide">撮り直す</button>
+  <button id="share" class="hide">保存・共有</button>
+  <a id="dl" class="btn hide" download="photo.jpg">ダウンロード</a>
+</div>
+
+<div class="tips" id="tips"></div>
+<div class="note">写真はこの端末の中だけで処理され、どこにも送られません。ガイド枠は撮影した写真には写りません。</div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const v=$('v'),g=$('g'),gx=g.getContext('2d');
+let stream=null,facing='environment',blob=null;
+
+const TIPS={
+ win1:['優勝者を中央の枠に座らせる。顔は上の楕円、肩は下の弧に合わせる。','テーブルの奥の縁を金色の線に合わせる(線より下は写真のまま使います)。','チップタワーやトロフィーは中央の四角の中に置く。','壁のタイマー画面は写さない(上の赤い帯の中に入れない)。'],
+ win2:['2人を左右の枠に並べて座らせる。顔の高さをそろえる。','テーブルの奥の縁を金色の線に合わせる。','チップタワーやトロフィーは中央の四角の中に。','壁のタイマー画面は写さない(上の赤い帯の中に入れない)。'],
+ win3:['3人を枠に合わせて座らせる。真ん中が優勝、左右の2人は少し前に。','テーブルの奥の縁を金色の線に合わせる。','チップタワーやトロフィーは中央の四角の中に。','壁のタイマー画面は写さない(上の赤い帯の中に入れない)。'],
+ ft:['テーブルを囲む人を、前列・後列の枠に合わせて座らせる。顔が重ならないように。','全員の顔と上半身が、外枠の内側に入るようにする。','壁のタイマー画面は写さない(上の赤い帯の中に入れない)。','撮影の高さは、座っている人の目線より少し高いくらい。']
+};
+function currentMode(){return document.querySelector('input[name=m]:checked').value}
+function renderTips(){$('tips').innerHTML='<h2>この撮り方のポイント</h2><ul>'+TIPS[currentMode()].map(t=>'<li>'+t+'</li>').join('')+'</ul>'}
+
+/* ガイド描画(座標は0〜1の割合) */
+function person(x,y,s){
+  const w=g.width,h=g.height,rx=.055*s*w,ry=.085*s*h;
+  gx.beginPath();gx.ellipse(x*w,y*h,rx,ry,0,0,7);gx.stroke();
+  gx.beginPath();gx.moveTo(x*w-rx*2.5,(y+.34*s)*h);gx.quadraticCurveTo(x*w-rx*2.4,(y+.12*s)*h,x*w,(y+.115*s)*h);
+  gx.quadraticCurveTo(x*w+rx*2.4,(y+.12*s)*h,x*w+rx*2.5,(y+.34*s)*h);gx.stroke();
+}
+function drawGuide(){
+  const w=g.width,h=g.height;if(!w)return;gx.clearRect(0,0,w,h);const m=currentMode();
+  gx.lineWidth=Math.max(2,w/400);
+  gx.fillStyle='rgba(220,60,60,.22)';gx.fillRect(0,0,w,h*.16);
+  gx.fillStyle='#ff8d8d';gx.font='600 '+(w/48)+'px sans-serif';gx.textAlign='center';gx.fillText('この帯にタイマー画面・文字を入れない',w/2,h*.095);
+  gx.strokeStyle='rgba(255,255,255,.55)';gx.setLineDash([w/60,w/90]);gx.strokeRect(w*.03,h*.03,w*.94,h*.94);gx.setLineDash([]);
+  gx.strokeStyle='rgba(255,255,255,.12)';[1/3,2/3].forEach(t=>{gx.beginPath();gx.moveTo(w*t,0);gx.lineTo(w*t,h);gx.moveTo(0,h*t);gx.lineTo(w,h*t);gx.stroke()});
+  gx.strokeStyle='rgba(255,255,255,.9)';gx.fillStyle='rgba(255,255,255,.9)';
+  if(m==='ft'){
+    [[.2,.37],[.35,.35],[.5,.34],[.65,.35],[.8,.37]].forEach(p=>person(p[0],p[1],.8));
+    gx.strokeStyle='rgba(212,174,85,.95)';
+    [[.12,.52],[.32,.55],[.68,.55],[.88,.52]].forEach(p=>person(p[0],p[1],1));
+    gx.strokeStyle='rgba(212,174,85,.7)';gx.setLineDash([w/50,w/80]);gx.beginPath();gx.ellipse(w*.5,h*.8,w*.34,h*.13,0,0,7);gx.stroke();gx.setLineDash([]);
+    gx.fillStyle='rgba(212,174,85,.95)';gx.font='600 '+(w/48)+'px sans-serif';gx.fillText('テーブル',w*.5,h*.81);
+  }else{
+    const xs=m==='win1'?[.5]:m==='win2'?[.34,.66]:[.2,.5,.8];
+    xs.forEach(x=>person(x,.33,1));
+    gx.strokeStyle='rgba(212,174,85,.98)';gx.lineWidth=Math.max(3,w/300);gx.beginPath();gx.moveTo(w*.03,h*.62);gx.lineTo(w*.97,h*.62);gx.stroke();
+    gx.fillStyle='rgba(212,174,85,.98)';gx.font='600 '+(w/48)+'px sans-serif';gx.textAlign='left';gx.fillText('テーブルの奥の縁をこの線に',w*.05,h*.605);
+    gx.setLineDash([w/80,w/100]);gx.strokeStyle='rgba(212,174,85,.9)';gx.lineWidth=Math.max(2,w/400);
+    gx.strokeRect(w*.42,h*.64,w*.16,h*.16);gx.setLineDash([]);gx.textAlign='center';gx.font='600 '+(w/56)+'px sans-serif';gx.fillText('チップ・トロフィー',w*.5,h*.835);
+  }
+}
+function fit(){const r=$('stage').getBoundingClientRect();g.width=Math.round(r.width);g.height=Math.round(r.height);drawGuide()}
+addEventListener('resize',fit);
+document.querySelectorAll('input[name=m]').forEach(e=>e.onchange=()=>{renderTips();drawGuide()});
+
+/* カメラ */
+async function openCam(){
+  if(stream)stream.getTracks().forEach(t=>t.stop());
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:2560},height:{ideal:1920}},audio:false});
+    v.srcObject=stream;await v.play();
+    const aspect=(v.videoWidth&&v.videoHeight)?v.videoWidth/v.videoHeight:4/3;
+    $('stage').style.aspectRatio=aspect;
+    $('msg').classList.add('hide');['flip','shot'].forEach(i=>$(i).classList.remove('hide'));$('start').classList.add('hide');
+    setTimeout(fit,50);
+  }catch(e){
+    $('msg').classList.remove('hide');
+    $('msg').textContent='カメラを開始できませんでした。ブラウザのカメラ許可を確認してください。('+(e&&e.name||'error')+')';
+  }
+}
+$('start').onclick=openCam;
+$('flip').onclick=()=>{facing=facing==='environment'?'user':'environment';openCam()};
+$('shot').onclick=()=>{
+  const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);
+  c.toBlob(b=>{blob=b;const u=URL.createObjectURL(b);$('shotImg').src=u;$('shotImg').classList.remove('hide');g.classList.add('hide');v.classList.add('hide');
+    $('dl').href=u;$('dl').download='photo_'+Date.now()+'.jpg';
+    ['shot','flip'].forEach(i=>$(i).classList.add('hide'));['again','share','dl'].forEach(i=>$(i).classList.remove('hide'))},'image/jpeg',.95);
+};
+$('again').onclick=()=>{$('shotImg').classList.add('hide');g.classList.remove('hide');v.classList.remove('hide');
+  ['again','share','dl'].forEach(i=>$(i).classList.add('hide'));['shot','flip'].forEach(i=>$(i).classList.remove('hide'))};
+$('share').onclick=async()=>{
+  try{const f=new File([blob],'photo.jpg',{type:'image/jpeg'});
+    if(navigator.canShare&&navigator.canShare({files:[f]}))await navigator.share({files:[f]});
+    else alert('写真を長押しして「写真に保存」してください。');
+  }catch(e){}
+};
+renderTips();fit();
+</script>
+</body>
+</html>
