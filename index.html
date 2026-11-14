@@ -14,7 +14,18 @@ h1{font-size:17px;margin:4px 0 10px}
 .seg label{cursor:pointer}.seg input{display:none}
 .seg span{display:inline-block;padding:9px 14px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
 .seg input:checked+span{border-color:var(--acc);color:var(--acc);background:#241f10}
-.stage{position:relative;width:100%;background:#000;border-radius:8px;overflow:hidden;aspect-ratio:4/3}
+.layout{display:flex;flex-direction:column;gap:10px}
+.stageBox{display:flex;align-items:center;justify-content:center;width:100%;min-width:0}
+.stage{position:relative;width:100%;height:auto;aspect-ratio:4/3;background:#000;border-radius:8px;overflow:hidden;flex:none}
+.side{min-width:0}
+@media (orientation:landscape) and (min-width:760px){
+  .wrap{max-width:none;padding:10px max(12px,env(safe-area-inset-left)) 10px}
+  .layout{flex-direction:row;height:calc(100dvh - 20px);align-items:stretch}
+  .stageBox{flex:1;height:100%;overflow:hidden}
+  .side{width:310px;flex:none;overflow-y:auto}
+  .bar button,.bar .btn{flex:1 1 45%}
+  button.shot{flex:1 1 100%}
+}
 .stage canvas,.stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
 .stage video{position:absolute;left:50%;top:50%;max-width:none;object-fit:contain;transform:translate(-50%,-50%) rotate(var(--rot,0deg))}
 .stage .msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:var(--mute)}
@@ -31,6 +42,16 @@ button.shot{flex:1;min-width:160px}
 </head>
 <body>
 <div class="wrap">
+<div class="layout">
+<div class="stageBox" id="stageBox">
+<div class="stage" id="stage">
+  <video id="v" playsinline muted autoplay></video>
+  <canvas id="g"></canvas>
+  <img id="shotImg" class="hide" alt="撮影した写真">
+  <div class="msg" id="msg">「カメラを開始」を押すと、ガイド枠つきで撮影できます。<br>横向きで撮ります。画面が横向きにならないとき(回転ロック中など)は、「画面を回転」ボタンで向きを合わせてください。</div>
+</div>
+</div>
+<div class="side">
 <h1>優勝・FT写真の撮影ガイド</h1>
 
 <div class="seg" id="mode">
@@ -38,13 +59,6 @@ button.shot{flex:1;min-width:160px}
   <label><input type="radio" name="m" value="win2"><span>優勝+準優勝</span></label>
   <label><input type="radio" name="m" value="win3"><span>3位まで</span></label>
   <label><input type="radio" name="m" value="ft"><span>FT集合(全員)</span></label>
-</div>
-
-<div class="stage" id="stage">
-  <video id="v" playsinline muted autoplay></video>
-  <canvas id="g"></canvas>
-  <img id="shotImg" class="hide" alt="撮影した写真">
-  <div class="msg" id="msg">「カメラを開始」を押すと、ガイド枠つきで撮影できます。<br>横向きで撮ります。画面が横向きにならないとき(回転ロック中など)は、「画面を回転」ボタンで向きを合わせてください。</div>
 </div>
 
 <div class="bar">
@@ -59,6 +73,8 @@ button.shot{flex:1;min-width:160px}
 
 <div class="tips" id="tips"></div>
 <div class="note">写真はこの端末の中だけで処理され、どこにも送られません。ガイド枠は撮影した写真には写りません。</div>
+</div>
+</div>
 </div>
 
 <script>
@@ -106,12 +122,14 @@ function drawGuide(){
   }
 }
 function fit(){
-  const vw=v.videoWidth||4,vh=v.videoHeight||3,sw=rot%180===0?vw:vh,sh=rot%180===0?vh:vw;
-  $('stage').style.aspectRatio=sw+'/'+sh;
-  const r=$('stage').getBoundingClientRect();
-  if(rot%180===0){v.style.width=r.width+'px';v.style.height=r.height+'px'}else{v.style.width=r.height+'px';v.style.height=r.width+'px'}
+  const vw=v.videoWidth||4,vh=v.videoHeight||3,sw=rot%180===0?vw:vh,sh=rot%180===0?vh:vw,a=sw/sh;
+  const box=$('stageBox'),land=matchMedia('(orientation:landscape) and (min-width:760px)').matches;
+  const aw=box.clientWidth,ah=land?box.clientHeight:Math.max(240,innerHeight-300);
+  const w=Math.max(100,Math.min(aw,ah*a)),hh=w/a,st=$('stage');
+  st.style.aspectRatio='auto';st.style.width=w+'px';st.style.height=hh+'px';
+  if(rot%180===0){v.style.width=w+'px';v.style.height=hh+'px'}else{v.style.width=hh+'px';v.style.height=w+'px'}
   v.style.setProperty('--rot',rot+'deg');
-  g.width=Math.round(r.width);g.height=Math.round(r.height);drawGuide();
+  g.width=Math.round(w);g.height=Math.round(hh);drawGuide();
 }
 addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,200));v.addEventListener('resize',fit);
 document.querySelectorAll('input[name=m]').forEach(e=>e.onchange=()=>{renderTips();drawGuide()});
