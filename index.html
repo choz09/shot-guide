@@ -55,6 +55,7 @@ button.shot{flex:1;min-width:160px}
 .tips h2{font-size:13px;margin:0 0 6px;color:var(--acc);letter-spacing:.05em}
 .tips ul{margin:0;padding-left:20px}
 .hide{display:none!important}
+#flip{display:inline-flex;align-items:center;justify-content:center}
 #tipBtn{display:none}
 .note{color:var(--mute);font-size:12px;margin-top:8px}
 </style>
@@ -83,7 +84,7 @@ button.shot{flex:1;min-width:160px}
 <div class="bar">
   <button id="start">カメラを開始</button>
   <button id="rot" class="sub hide">画面を回転</button>
-  <button id="flip" class="sub hide">前面/背面</button>
+  <button id="flip" class="sub hide" type="button" aria-label="カメラの前面・背面を切り替え" title="前面/背面"><svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l1.2-1.6h3.6L15 6h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3z"/><path d="M9.2 12.6a3 3 0 0 1 5.2-1.5"/><path d="M14.4 9.4v1.8h-1.8"/><path d="M14.8 13.4a3 3 0 0 1-5.2 1.5"/><path d="M9.6 16.6v-1.8h1.8"/></svg></button>
   <button id="shot" class="shot hide">撮影</button>
   <button id="tipBtn" class="sub" type="button">撮り方のポイント</button>
   <button id="again" class="sub hide">撮り直す</button>
