@@ -187,7 +187,7 @@ function drawStage(anchor){
   if(im){const s=Math.min(W*.98/im.width,(anchor-230)/im.height)*st.zoom,w=im.width*s,h=im.height*s;
     if(keep){const o=im.off,pxs=(W-w)/2+st.dx-o.x0*s,pys=anchor-h+st.dy-o.y0*s,ty=Math.round(o.oh*($('tableY').value/100)),sh=o.oh-ty;
       const pw=Math.ceil(o.ow*s),ph=Math.ceil(sh*s),tb=document.createElement('canvas');tb.width=pw;tb.height=ph;const u=tb.getContext('2d');
-      u.drawImage(st.photo,0,ty,o.ow,sh,0,0,pw,ph);u.globalCompositeOperation='destination-in';
+      const kx=st.photo.width/o.ow;u.drawImage(st.photo,0,ty*kx,st.photo.width,sh*kx,0,0,pw,ph);u.globalCompositeOperation='destination-in';
       const gr=u.createLinearGradient(0,0,0,ph),t1=Math.min(.3,40/ph);gr.addColorStop(0,'rgba(0,0,0,0)');gr.addColorStop(t1,'rgba(0,0,0,1)');gr.addColorStop(.72,'rgba(0,0,0,1)');gr.addColorStop(1,'rgba(0,0,0,0)');u.fillStyle=gr;u.fillRect(0,0,pw,ph);
       ctx.drawImage(tb,pxs,pys+ty*s)}
     const tc=document.createElement('canvas');tc.width=Math.ceil(w);tc.height=Math.ceil(h);const t=tc.getContext('2d');
@@ -202,7 +202,9 @@ async function makeCut(){
   st.busy=true;status('切り抜き準備中…(初回は1分ほどかかります)');draw();
   try{
     const mod=await import(BGREMOVE);const rb=mod.removeBackground||mod.default;
-    const blob=await rb(st.photoFile,{output:{format:'image/png'},progress:(k,c,t)=>status('読込・処理中… '+(t?Math.round(c/t*100)+'%':''))});
+    let src=st.photoFile;
+    if(Math.max(st.photo.width,st.photo.height)>1600){const k=1600/Math.max(st.photo.width,st.photo.height),c=document.createElement('canvas');c.width=Math.round(st.photo.width*k);c.height=Math.round(st.photo.height*k);c.getContext('2d').drawImage(st.photo,0,0,c.width,c.height);src=await new Promise(r=>c.toBlob(r,'image/png'))}
+    const blob=await rb(src,{output:{format:'image/png'},progress:(k,c,t)=>status('読込・処理中… '+(t?Math.round(c/t*100)+'%':''))});
     await new Promise(res=>loadImg(blob,im=>{st.cut=trimAlpha(im);st.cutFor=st.photoFile;res()}));
     status('切り抜き完了。ドラッグで位置、バーで大きさを調整できます。');
   }catch(e){st.failed=true;status('切り抜きに失敗しました(ネット接続を確認してください): '+(e&&e.message||e))}
